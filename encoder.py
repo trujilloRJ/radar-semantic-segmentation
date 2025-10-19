@@ -14,9 +14,7 @@ class Grid:
         self.grid = np.zeros(
             (self.n_x_cells, self.n_y_cells, self.n_channels), dtype=np.float32
         )
-        self.out_grid = np.zeros(
-            (self.n_x_cells, self.n_y_cells, N_LABELS), dtype=np.uint8
-        )
+        self.out_grid = np.zeros((self.n_x_cells, self.n_y_cells, 1), dtype=np.uint8)
 
     def fill_grid(self, cur_dets: pd.DataFrame, is_output=False):
         for _, det in cur_dets.iterrows():
@@ -30,7 +28,7 @@ class Grid:
                 x_idx, y_idx = self.get_cell_id(x_cc, y_cc)
 
                 if is_output:
-                    self.out_grid[x_idx, y_idx, label_to_index[det["label_id"]]] = 1
+                    self.out_grid[x_idx, y_idx, 0] = label_to_index[det["label_id"]]
                 else:
                     self.grid[x_idx, y_idx, 0] += det["rcs"]
                     self.grid[x_idx, y_idx, 1] += det["vr_compensated"]

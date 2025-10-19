@@ -70,7 +70,9 @@ class UNet(nn.Module):
         )
         self.down_blocks = nn.ModuleList()
         self.up_blocks = nn.ModuleList()
-        self.out_conv = nn.Conv2d(chs[0], n_classes, kernel_size=1)
+        self.out_conv = nn.Conv2d(
+            in_channels=chs[0], out_channels=n_classes, kernel_size=1
+        )
 
         # Create down_blocks and up_blocks based on chs
         for i in range(self.depth - 1):

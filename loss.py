@@ -1,5 +1,6 @@
 import torch
 import torch.nn.functional as F
+import torch.nn as nn
 
 
 def dice_loss(pred_bhw, target_bhw, eps=0.001, **kwargs):
@@ -10,6 +11,11 @@ def dice_loss(pred_bhw, target_bhw, eps=0.001, **kwargs):
         pred_bhw.sum(dim=sum_dim) + target_bhw.sum(dim=sum_dim) + eps
     )
     return 1.0 - dice.mean()
+
+
+def cross_entropy_loss(logits_bhw, label_bhw):
+    criterion = nn.CrossEntropyLoss()
+    return criterion(logits_bhw, label_bhw.long())
 
 
 def jaccard_loss(pred_bhw, target_bhw, eps=0.001):
