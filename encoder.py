@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from config import N_LABELS, label_to_index
+from config import DONT_CARE, label_to_index
 
 
 class Grid:
@@ -15,6 +15,7 @@ class Grid:
             (self.n_x_cells, self.n_y_cells, self.n_channels), dtype=np.float32
         )
         self.out_grid = np.zeros((self.n_x_cells, self.n_y_cells, 1), dtype=np.uint8)
+        self.out_grid.fill(label_to_index[DONT_CARE])  # default label
 
     def fill_grid(self, cur_dets: pd.DataFrame, is_output=False):
         for _, det in cur_dets.iterrows():

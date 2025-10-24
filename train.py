@@ -7,7 +7,7 @@ import os
 import numpy as np
 from dataset import RadarDataset
 from model import UNet
-from loss import cross_entropy_loss
+from loss import cross_entropy_loss, FocalLoss
 from torch.utils.data import DataLoader
 from config import N_LABELS
 import torch.nn as nn
@@ -51,7 +51,8 @@ if __name__ == "__main__":
     batch_size = 4
     save_each = 25
     optimizer_choice = OptimizerChoice.ADAMW
-    loss_fn = cross_entropy_loss
+    # criterion = cross_entropy_loss
+    criterion = FocalLoss(task_type="multi-class", num_classes=N_LABELS, gamma=2.0)
     # wbce = torch.tensor([0.8], device=DEVICE) # weight of the BCE loss
     chs = [8, 16, 32]
     augment_data = False
@@ -62,6 +63,7 @@ if __name__ == "__main__":
         "exp_name": experiment_name,
         "optimizer_choice": optimizer_choice.value,
         "augmentation": augment_data,
+        "criterion": repr(criterion),
         "unet_chs": chs,
     }
 
@@ -97,12 +99,12 @@ if __name__ == "__main__":
         for batch in tqdm.tqdm(train_loader, desc=f"Training epoch {epoch + 1}"):
             data, label = batch
             data, label = data.to(DEVICE), label.to(DEVICE)
-            loss = train_step(model, optimizer, loss_fn, data, label)
+            loss = train_step(model, optimizer, criterion, data, label)
             epoch_tr_loss += loss
 
         epoch_tr_loss /= len(train_loader)
 
-        epoch_val_loss = validate_epoch(model, val_loader, loss_fn, DEVICE)
+        epoch_val_loss = validate_epoch(model, val_loader, criterion, DEVICE)
 
         logging.info(
             f"Global epoch: {global_epoch} -> Train loss: {epoch_tr_loss:.3f} | Validation loss: {epoch_val_loss:.3f}"
@@ -111,3 +113,10 @@ if __name__ == "__main__":
             f"Train loss: {epoch_tr_loss:.3f} | Validation loss: {epoch_val_loss:.3f}"
         )
         print("-----------------------------------------------------------------------")
+
+    save_checkpoint(
+        model,
+        optimizer,
+        global_epoch,
+        f"checkpoints/{experiment_name}_ep{global_epoch}.pth",
+    )

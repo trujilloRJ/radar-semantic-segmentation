@@ -13,6 +13,7 @@ PEDESTRIAN_GROUP = 8
 ANIMAL = 9
 OTHER = 10
 STATIC = 11
+DONT_CARE = 12
 
 labels_map = {
     TRUCK: LARGE_VEHICLE,
@@ -21,7 +22,7 @@ labels_map = {
     PEDESTRIAN_GROUP: PEDESTRIAN,
 }
 drop_labels = [OTHER, ANIMAL, TRAIN]
-final_labels = [CAR, LARGE_VEHICLE, BICYCLE, PEDESTRIAN, STATIC]
+final_labels = [CAR, LARGE_VEHICLE, BICYCLE, PEDESTRIAN, STATIC, DONT_CARE]
 label_to_index = {label: idx for idx, label in enumerate(final_labels)}
 index_to_label = {idx: label for idx, label in enumerate(final_labels)}
 N_LABELS = len(final_labels)
