@@ -17,6 +17,13 @@ class Grid:
         self.out_grid = np.zeros((self.n_x_cells, self.n_y_cells, 1), dtype=np.uint8)
         self.out_grid.fill(label_to_index[DONT_CARE])  # default label
 
+    @classmethod
+    def from_existing(cls, input_grid, output_grid, x_lims, y_lims, cell_size):
+        grid_instance = cls(x_lims, y_lims, cell_size)
+        grid_instance.grid = input_grid
+        grid_instance.out_grid = output_grid
+        return grid_instance
+
     def fill_grid(self, cur_dets: pd.DataFrame, is_output=False):
         for _, det in cur_dets.iterrows():
             x_cc = det["x_cc"]
@@ -59,6 +66,11 @@ class Grid:
         x_pos = x_inds * self.cell_size + self.x_lims[0]
         y_pos = y_inds * self.cell_size + self.y_lims[0]
         return x_inds, y_inds, x_pos, y_pos
+
+    def get_xy(self, x_ind: int, y_ind: int):
+        x_pos = x_ind * self.cell_size + self.x_lims[0]
+        y_pos = y_ind * self.cell_size + self.y_lims[0]
+        return x_pos, y_pos
 
 
 if __name__ == "__main__":

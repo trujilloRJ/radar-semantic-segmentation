@@ -5,11 +5,12 @@ import tqdm
 import json
 import os
 import numpy as np
+from common import set_seed
 from dataset import RadarDataset
 from model import UNet
-from loss import cross_entropy_loss, FocalLoss
+from loss import WeightedCrossEntropyLoss, cross_entropy_loss, FocalLoss
 from torch.utils.data import DataLoader
-from config import N_LABELS
+from config import N_LABELS, label_to_index
 import torch.nn as nn
 
 from runner import (
@@ -42,22 +43,29 @@ def create_optimizer(model: torch.nn.Module, choice: OptimizerChoice, lr: float)
 
 if __name__ == "__main__":
     # hyper-parameters
-    experiment_name = "test"
+    experiment_name = "baseline_unet_WCE"
     resume_training = False
     initial_epoch = 0
     SEED = 0
-    n_epochs = 20
+    n_epochs = 40
     lr = 1e-4
     batch_size = 4
     save_each = 25
     optimizer_choice = OptimizerChoice.ADAMW
-    # criterion = cross_entropy_loss
-    criterion = FocalLoss(task_type="multi-class", num_classes=N_LABELS, gamma=2.0)
+    criterion = WeightedCrossEntropyLoss(
+        weight=torch.tensor([1, 1, 1, 1, 0.1, 1], device=DEVICE),
+        ignore_index=label_to_index["DONT_CARE"],
+    )
+    # criterion = FocalLoss(
+    #     task_type="multi-class", num_classes=N_LABELS, gamma=2.0, reduction="mean"
+    # )
     # wbce = torch.tensor([0.8], device=DEVICE) # weight of the BCE loss
-    chs = [8, 16, 32]
+    # chs = [8, 16, 32]
+    chs = [16, 32, 64]
     augment_data = False
     # -------------------------
 
+    set_seed(SEED)
     # initializing experiment configuration
     config = {
         "exp_name": experiment_name,
@@ -67,6 +75,9 @@ if __name__ == "__main__":
         "unet_chs": chs,
     }
 
+    with open(f"checkpoints/{experiment_name}_config.json", "w") as f:
+        json.dump(config, f, indent=4)
+
     logging.basicConfig(
         filename=f"checkpoints/{experiment_name}.log",
         encoding="utf-8",
@@ -75,12 +86,17 @@ if __name__ == "__main__":
 
     train_data_folder = "data/train/input/"
     train_gt_folder = "data/train/gt/"
-    train_indices = np.arange(0, 512)
-    val_indices = np.arange(512, 640)
 
     train_data = RadarDataset(train_data_folder, train_gt_folder)
-    train_data.subset_on_indices(train_indices)
     val_data = RadarDataset(train_data_folder, train_gt_folder)
+
+    n_samples = len(train_data)
+    n_train, n_val = 2000, 500
+    shuffle_indices = np.random.randint(0, n_samples, size=n_samples)
+    train_indices = shuffle_indices[:n_train]
+    val_indices = shuffle_indices[n_train : n_train + n_val]
+
+    train_data.subset_on_indices(train_indices)
     val_data.subset_on_indices(val_indices)
 
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
@@ -90,6 +106,7 @@ if __name__ == "__main__":
 
     optimizer = create_optimizer(model, optimizer_choice, lr)
 
+    lower_val_loss = 100
     for epoch in range(n_epochs):
         global_epoch = initial_epoch + epoch + 1
         print(f"Training local epoch {epoch + 1}/{n_epochs}")
@@ -114,9 +131,16 @@ if __name__ == "__main__":
         )
         print("-----------------------------------------------------------------------")
 
-    save_checkpoint(
-        model,
-        optimizer,
-        global_epoch,
-        f"checkpoints/{experiment_name}_ep{global_epoch}.pth",
-    )
+        if epoch_val_loss < lower_val_loss:
+            lower_val_loss = epoch_val_loss
+            save_this = epoch / n_epochs > 0.1
+        else:
+            save_this = False
+
+        if (global_epoch % save_each == 0) | (save_this):
+            save_checkpoint(
+                model,
+                optimizer,
+                epoch,
+                f"checkpoints/{experiment_name}_ep{global_epoch}.pth",
+            )

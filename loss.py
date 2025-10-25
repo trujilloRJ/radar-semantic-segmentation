@@ -8,7 +8,7 @@ class FocalLoss(nn.Module):
         self,
         gamma=2,
         alpha=None,
-        reduction="mean",
+        reduction="sum",
         task_type="binary",
         num_classes=None,
     ):
@@ -100,20 +100,23 @@ class FocalLoss(nn.Module):
         if self.alpha is not None:
             alpha = self.alpha.to(inputs.device)
 
-        # Convert logits to probabilities with softmax
-        probs = F.softmax(inputs, dim=1)
-
         # One-hot encode the targets
         targets_one_hot = F.one_hot(targets, num_classes=self.num_classes).float()
         targets_one_hot = targets_one_hot.permute(
             0, 3, 1, 2
         )  # shape: (batch_size, num_classes)
 
+        # Convert logits to probabilities with softmax
+        probs = F.softmax(inputs, dim=1)
+
         # Compute cross-entropy for each class
         ce_loss = -targets_one_hot * torch.log(probs)
 
         # Compute focal weight
-        p_t = torch.sum(probs * targets_one_hot, dim=1)  # p_t for each sample
+        weights = torch.tensor([1, 1, 1, 1, 1, 1], device=inputs.device).view(
+            1, -1, 1, 1
+        )
+        p_t = torch.sum(weights * probs * targets_one_hot, dim=1)  # p_t for each sample
         focal_weight = (1 - p_t) ** self.gamma
 
         # Apply alpha if provided (per-class weighting)
@@ -156,6 +159,22 @@ class FocalLoss(nn.Module):
         return loss
 
 
+class WeightedCrossEntropyLoss(nn.Module):
+    def __init__(self, weight=None, reduction="mean", ignore_index=None):
+        super(WeightedCrossEntropyLoss, self).__init__()
+        self.weight = weight
+        self.reduction = reduction
+        self.ce_loss = nn.CrossEntropyLoss(
+            weight=weight, reduction=reduction, ignore_index=ignore_index
+        )
+
+    def __repr__(self):
+        return f"WeightedCrossEntropyLoss(weight={self.weight}, reduction='{self.reduction}')"
+
+    def forward(self, logits_bhw, label_bhw):
+        return self.ce_loss(logits_bhw, label_bhw.long())
+
+
 def dice_loss(pred_bhw, target_bhw, eps=0.001, **kwargs):
     pred_bhw = torch.sigmoid(pred_bhw)
     sum_dim = (-1, -2)  # sum over H, W
@@ -166,9 +185,9 @@ def dice_loss(pred_bhw, target_bhw, eps=0.001, **kwargs):
     return 1.0 - dice.mean()
 
 
-def cross_entropy_loss(logits_bhw, label_bhw):
-    criterion = nn.CrossEntropyLoss()
-    return criterion(logits_bhw, label_bhw.long())
+# def cross_entropy_loss(logits_bhw, label_bhw):
+#     criterion = nn.CrossEntropyLoss(ignore_index=5, reduction="mean")
+#     return criterion(logits_bhw, label_bhw.long())
 
 
 def jaccard_loss(pred_bhw, target_bhw, eps=0.001):

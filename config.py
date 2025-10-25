@@ -25,4 +25,12 @@ drop_labels = [OTHER, ANIMAL, TRAIN]
 final_labels = [CAR, LARGE_VEHICLE, BICYCLE, PEDESTRIAN, STATIC, DONT_CARE]
 label_to_index = {label: idx for idx, label in enumerate(final_labels)}
 index_to_label = {idx: label for idx, label in enumerate(final_labels)}
+label_to_str = {
+    CAR: "car",
+    LARGE_VEHICLE: "large_vehicle",
+    BICYCLE: "bicycle",
+    PEDESTRIAN: "pedestrian",
+    STATIC: "static",
+    DONT_CARE: "dont_care",
+}
 N_LABELS = len(final_labels)

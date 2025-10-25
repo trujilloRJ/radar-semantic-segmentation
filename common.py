@@ -1,8 +1,19 @@
 import os
 import h5py
 import pandas as pd
+import torch
+import numpy as np
+import random
 
 from config import SENSOR_FL, labels_map, final_labels
+
+
+def set_seed(seed_value=42):
+    random.seed(seed_value)
+    np.random.seed(seed_value)
+    torch.manual_seed(seed_value)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed_value)
 
 
 def get_scene(scene_fn):

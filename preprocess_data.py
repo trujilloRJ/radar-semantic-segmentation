@@ -14,9 +14,10 @@ load_dotenv()
 
 # params
 path = "data/train"
-sequences = ["sequence_1", "sequence_2"]
-# path = "data/test"
-# sequences = ["sequence_3"]
+# sequences = ["sequence_1", "sequence_2", "sequence_3", "sequence_4", "sequence_5"]
+# sequences = ["sequence_3", "sequence_4", "sequence_5"]
+path = "data/test"
+sequences = ["sequence_6", "sequence_7"]
 # ----------------------------
 
 if __name__ == "__main__":
