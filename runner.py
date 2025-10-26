@@ -37,7 +37,7 @@ def validate_epoch(model, val_loader, loss_fn, device, wbce=None):
     model.eval()
     epoch_val_loss = 0.0
     with torch.no_grad():
-        for img, label in val_loader:
+        for img, label, _ in val_loader:
             img, label = img.to(device), label.to(device)
             logits = model(img)
             loss = loss_fn(logits, label.squeeze(1).long())

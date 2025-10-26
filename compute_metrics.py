@@ -2,7 +2,7 @@ import torch
 import tqdm
 import json
 import os
-from dataset import RadarDataset
+from dataset import OutGridDataset, RadarDataset
 from model import UNet
 from torch.utils.data import DataLoader
 from dotenv import load_dotenv
@@ -13,7 +13,7 @@ import numpy as np
 
 load_dotenv()
 
-EXP_FOLDER = "checkpoints/"
+RESULTS_FOLDER = "results/"
 
 
 def plot_confusion_matrix(
@@ -85,43 +85,29 @@ def plot_results(confusion_matrix: torch.Tensor, experiment: str):
 
 
 if __name__ == "__main__":
-    evaluation_folder = "data/train"
-    exp_name = "baseline_unet_noWCE"
-    epoch = 12
+    exp_name = "baseline_unet_WCE_OneCycleLR_ep6"
+    results_path = os.path.join(RESULTS_FOLDER, exp_name)
+    gt_path = "data/validation/gt"
 
-    # load config
-    with open(os.path.join(EXP_FOLDER, f"{exp_name}_config.json")) as f:
-        config = json.load(f)
+    pred_dataset = OutGridDataset(results_path)
+    gt_dataset = OutGridDataset(gt_path)
 
-    # load model
-    model = UNet(chs=config["unet_chs"], n_classes=N_LABELS)
-    checkpoint = torch.load(f"checkpoints/{exp_name}_ep{epoch}.pth")
-    model.load_state_dict(checkpoint["model_state_dict"])
-    model.eval()
-
-    eval_data = RadarDataset(f"{evaluation_folder}/input", f"{evaluation_folder}/gt")
     confmat = ConfusionMatrix(
         task="multiclass", num_classes=N_LABELS, ignore_index=label_to_index[DONT_CARE]
     )
 
-    eval_loader = DataLoader(eval_data, batch_size=8, shuffle=False)
-    n_examples = len(eval_data)
+    n_examples = len(pred_dataset)
 
-    confusion_matrix = torch.zeros((N_LABELS, N_LABELS), dtype=int)
-    for batch in tqdm.tqdm(
-        eval_loader,
-        desc=f"Evaluating on {n_examples} examples",
-        total=n_examples // eval_loader.batch_size,
-    ):
-        input_tensor, gt_tensor = batch
+    confusion_matrix = torch.zeros((N_LABELS, N_LABELS), dtype=torch.int64)
+    for batch_idx in tqdm.tqdm(range(n_examples)):
+        input_tensor = pred_dataset[batch_idx]
+        gt_tensor = gt_dataset[batch_idx]
 
         with torch.no_grad():
-            output = model(input_tensor)
-            predicted_classes = torch.argmax(output, dim=1)
+            predicted_classes = input_tensor.unsqueeze(0)
 
-        confusion_matrix += confmat(predicted_classes, gt_tensor.squeeze(1))
+        confusion_matrix += confmat(predicted_classes, gt_tensor.unsqueeze(0))
 
-    experiment = f"{exp_name}_ep{epoch}"
-    torch.save(confusion_matrix, f"results/confusion_matrix_{experiment}.pth")
+    # torch.save(confusion_matrix, f"results/confusion_matrix_{experiment}.pth")
 
-    plot_results(confusion_matrix, experiment=experiment)
+    plot_results(confusion_matrix, experiment=exp_name)

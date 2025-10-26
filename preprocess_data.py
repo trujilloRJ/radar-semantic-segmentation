@@ -13,11 +13,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # params
-path = "data/train"
+# path = "data/train"
 # sequences = ["sequence_1", "sequence_2", "sequence_3", "sequence_4", "sequence_5"]
-# sequences = ["sequence_3", "sequence_4", "sequence_5"]
+# path = "data/validation"
+# sequences = ["sequence_6", "sequence_7"]
 path = "data/test"
-sequences = ["sequence_6", "sequence_7"]
+sequences = ["sequence_8", "sequence_9"]
 # ----------------------------
 
 if __name__ == "__main__":
