@@ -1,15 +1,13 @@
 import torch
 import tqdm
-import json
 import os
-from dataset import OutGridDataset, RadarDataset
-from model import UNet
-from torch.utils.data import DataLoader
 from dotenv import load_dotenv
 from config import label_to_index, DONT_CARE, N_LABELS, final_labels, label_to_str
 from torchmetrics import ConfusionMatrix
 import matplotlib.pyplot as plt
 import numpy as np
+
+from dataset import OutGridDataset
 
 load_dotenv()
 
@@ -85,7 +83,7 @@ def plot_results(confusion_matrix: torch.Tensor, experiment: str):
 
 
 if __name__ == "__main__":
-    exp_name = "baseline_unet_WCE_OneCycleLR_ep6"
+    exp_name = "deep2_unet_b4_DoppFilt_WCE01_LN_ep4"
     results_path = os.path.join(RESULTS_FOLDER, exp_name)
     gt_path = "data/validation/gt"
 

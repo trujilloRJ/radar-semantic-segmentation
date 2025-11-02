@@ -13,8 +13,11 @@ class OutGridDataset(Dataset):
             if seq_filter
             else listdir(data_folder)
         )
+        self.compute_ts_and_sequences()
 
+    def compute_ts_and_sequences(self):
         self.timestamps = [fn.split("_")[2].replace("ts", "") for fn in self.file_list]
+        self.sequences = [fn.rsplit("_", 2)[0] for fn in self.file_list]
 
     def __len__(self):
         return len(self.file_list)
@@ -27,6 +30,14 @@ class OutGridDataset(Dataset):
     def get_data_by_timestamp(self, timestamp: str):
         return self.__getitem__(self.timestamps.index(timestamp))
 
+    def subset_on_sequence_id(self, sequence_id: str):
+        valid_names = [data_fn for data_fn in self.file_list if sequence_id in data_fn]
+        if valid_names:
+            self.file_list = valid_names
+            self.compute_ts_and_sequences()
+        else:
+            raise ValueError(f"No data found for sequence ID: {sequence_id}")
+
 
 class RadarDataset(Dataset):
     def __init__(self, data_folder: str, gt_folder: str, augment=False, seed=0):
@@ -35,9 +46,11 @@ class RadarDataset(Dataset):
 
         img_name_lists = listdir(data_folder)
         gt_name_lists = listdir(gt_folder)
-        self.data_gt_list = [
-            (img, gt) for img, gt in zip(img_name_lists, gt_name_lists)
-        ]
+
+        self.data_gt_list = []
+        for img, gt in zip(img_name_lists, gt_name_lists):
+            assert img == gt, f"Image and GT file names do not match: {img} != {gt}"
+            self.data_gt_list.append((img, gt))
 
     def __len__(self):
         return len(self.data_gt_list)

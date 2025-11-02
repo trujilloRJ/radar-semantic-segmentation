@@ -1,3 +1,4 @@
+from typing import Literal
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -11,17 +12,30 @@ class ConvBlock(nn.Module):
         out_ch: int,
         kernel_size=3,
         padding="same",
-        use_batch_norm=True,
+        norm: Literal["batch", "layer", "instance", None] = "layer",
         **kwargs,
     ):
         super().__init__()
-        use_bias = not use_batch_norm
+
+        match norm:
+            case "batch":
+                use_bias = False
+                norm_layer = nn.BatchNorm2d(out_ch)
+            case "layer":
+                use_bias = False
+                norm_layer = nn.GroupNorm(1, out_ch)
+            case "instance":
+                use_bias = False
+                norm_layer = nn.InstanceNorm2d(out_ch)
+            case None:
+                use_bias = True
+                norm_layer = None
 
         self.operation = nn.Sequential(
             nn.Conv2d(
                 in_ch, out_ch, kernel_size=kernel_size, padding=padding, bias=use_bias
             ),
-            nn.BatchNorm2d(out_ch),
+            norm_layer if norm_layer else nn.Identity(),
             nn.ReLU(inplace=True),
         )
 
@@ -118,4 +132,4 @@ if __name__ == "__main__":
     chs = [32, 64, 128, 256]
     model = UNet(chs, n_classes=5)
     model.to("cuda")
-    summary(model, input_size=(3, 196, 140), batch_size=16)
+    summary(model, input_size=(3, 196, 140), batch_size=8)

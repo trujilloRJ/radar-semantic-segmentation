@@ -2,6 +2,12 @@ import numpy as np
 import pandas as pd
 from config import DONT_CARE, label_to_index
 
+RCS_MIN = -30  # dBsm
+RCS_MAX = 50  # dBsm
+VR_MIN = -40  # m/s
+VR_MAX = 40  # m/s
+COUNT_MAX = 5
+
 
 class Grid:
     def __init__(self, x_lims, y_lims, cell_size):
@@ -29,6 +35,10 @@ class Grid:
             x_cc = det["x_cc"]
             y_cc = det["y_cc"]
 
+            # skip really stationary detctions, no need to reclassify this as static
+            if np.abs(det["vr_compensated"]) < 0.3:
+                continue
+
             if (
                 self.x_lims[0] <= x_cc < self.x_lims[1]
                 and self.y_lims[0] <= y_cc < self.y_lims[1]
@@ -45,6 +55,15 @@ class Grid:
         if not is_output:
             self.grid[:, :, 0] /= np.maximum(self.grid[:, :, 2], 1)
             self.grid[:, :, 1] /= np.maximum(self.grid[:, :, 2], 1)
+
+            # normalizing grid channels
+            self.grid[:, :, 0] = (self.grid[:, :, 0] - RCS_MIN) / (
+                RCS_MAX - RCS_MIN
+            )  # rcs normalization
+            self.grid[:, :, 1] = (self.grid[:, :, 1] - VR_MIN) / (
+                VR_MAX - VR_MIN
+            )  # vr normalization
+            self.grid[:, :, 2] = self.grid[:, :, 2] / COUNT_MAX  # count normalization
 
     def clear_grid(self):
         self.grid.fill(0)

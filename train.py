@@ -40,34 +40,35 @@ def create_optimizer(model: torch.nn.Module, choice: OptimizerChoice, lr: float)
 
 if __name__ == "__main__":
     # hyper-parameters
-    experiment_name = "deep1_unet_WCE_OneCycleLR"
+    experiment_name = "deep2_unet_b4_DoppFilt_WCE01_LN"
     resume_training = False
     initial_epoch = 0
     SEED = 0
-    n_epochs = 10
-    lr = 1e-4
+    n_epochs = 5
+    lr = 3e-4
     batch_size = 4
     save_each = 25
     optimizer_choice = OptimizerChoice.ADAMW
     criterion = WeightedCrossEntropyLoss(
-        weight=torch.tensor([1, 1, 1, 1, 0.1, 1], device=DEVICE),
+        weight=torch.tensor([1, 1, 1, 1, 1.0, 1], device=DEVICE),
         ignore_index=label_to_index[DONT_CARE],
     )
     scheduler_fn = torch.optim.lr_scheduler.OneCycleLR
+    # scheduler_fn = None
     # chs = [16, 32, 64]
-    chs = [16, 32, 64, 128]
+    chs = [32, 64, 128, 256]
     augment_data = False
+    steps_for_validation = 1000
     # -------------------------
 
     set_seed(SEED)
-    steps_for_validation = 200
     # initializing experiment configuration
     config = {
         "exp_name": experiment_name,
         "optimizer_choice": optimizer_choice.value,
         "augmentation": augment_data,
         "criterion": repr(criterion),
-        "scheduler": scheduler_fn.__class__.__name__,
+        "scheduler": scheduler_fn.__class__.__name__ if scheduler_fn else None,
         "unet_chs": chs,
     }
 
@@ -92,18 +93,19 @@ if __name__ == "__main__":
 
     optimizer = create_optimizer(model, optimizer_choice, lr)
 
-    scheduler = scheduler_fn(
-        optimizer, max_lr=1e-3, total_steps=n_epochs * len(train_loader)
-    )
+    if scheduler_fn:
+        scheduler = scheduler_fn(
+            optimizer, max_lr=1e-3, total_steps=n_epochs * len(train_loader)
+        )
 
     lower_val_loss = 100
     steps = 0
+    epoch_tr_loss = 0.0
     for epoch in range(n_epochs):
         global_epoch = initial_epoch + epoch + 1
         print(f"Training local epoch {epoch + 1}/{n_epochs}")
 
         model.train()
-        epoch_tr_loss = 0.0
         with tqdm.tqdm(
             total=len(train_loader), desc=f"Training epoch {epoch + 1}"
         ) as pbar:
@@ -112,8 +114,9 @@ if __name__ == "__main__":
                 data, label = data.to(DEVICE), label.to(DEVICE)
                 loss = train_step(model, optimizer, criterion, data, label)
                 epoch_tr_loss += loss
-                scheduler.step()
                 steps += 1
+                if scheduler_fn:
+                    scheduler.step()
                 pbar.update()
 
                 if steps % steps_for_validation == 0:
@@ -122,18 +125,19 @@ if __name__ == "__main__":
                     epoch_val_loss = validate_epoch(
                         model, val_loader, criterion, DEVICE
                     )
+                    model.train()
 
                     logging.info(
                         f"Global epoch: {global_epoch} -> Train loss: {epoch_tr_loss:.3f} | Validation loss: {epoch_val_loss:.3f}"
                     )
                     print(
-                        f"Train loss: {epoch_tr_loss:.3f} | Validation loss: {epoch_val_loss:.3f} | LR: {scheduler.get_last_lr()[0]:.6f}"
+                        f"Train loss: {epoch_tr_loss:.3f} | Validation loss: {epoch_val_loss:.3f} | LR: {optimizer.param_groups[0]['lr']:.6f}"
                     )
                     print(
                         "-----------------------------------------------------------------------"
                     )
                     epoch_tr_loss = 0.0
-                    pbar.set_postfix(loss=f"{epoch_val_loss:.4f}", refresh=True)
+                    # pbar.set_postfix(loss=f"{epoch_val_loss:.3f}", refresh=True)
                     pbar.update()
 
                     if (global_epoch % save_each == 0) | (

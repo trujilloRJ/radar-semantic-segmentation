@@ -13,8 +13,8 @@ if __name__ == "__main__":
     evaluation_folder = "data/validation"
     sequence_id = "sequence_1"
     results_folder = "results"
-    model_name = "baseline_unet_WCE_OneCycleLR"
-    epoch = 6
+    model_name = "deep2_unet_b4_DoppFilt_WCE01_LN"
+    epoch = 4
     exp_name = f"{model_name}_ep{epoch}"
 
     results_path = os.path.join(results_folder, exp_name)
@@ -34,11 +34,15 @@ if __name__ == "__main__":
     # eval_data.subset_on_sequence_id(sequence_id)
     n_frames = len(eval_data)
 
-    for batch in tqdm.tqdm(
-        eval_data,
-        desc=f"Inference on {n_frames} frames",
+    for i, batch in enumerate(
+        tqdm.tqdm(
+            eval_data,
+            desc=f"Inference on {n_frames} frames",
+        )
     ):
         input_tensor, gt_tensor, ts = batch
+        fn, _ = eval_data.data_gt_list[i]
+        sequence_name = fn.split("_")[0]
 
         with torch.no_grad():
             output = model(input_tensor.unsqueeze(0))
@@ -46,5 +50,5 @@ if __name__ == "__main__":
 
         torch.save(
             predicted_classes,
-            os.path.join(results_path, f"{sequence_id}_ts{ts}_PRED.pth"),
+            os.path.join(results_path, f"{sequence_name}_ts{ts}_PRED.pth"),
         )
