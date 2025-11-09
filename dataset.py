@@ -30,6 +30,14 @@ class OutGridDataset(Dataset):
     def get_data_by_timestamp(self, timestamp: str):
         return self.__getitem__(self.timestamps.index(timestamp))
 
+    def get_data_by_sequence_ts(self, sequence_id: str, timestamp: str):
+        for idx, (seq, ts) in enumerate(zip(self.sequences, self.timestamps)):
+            if seq == sequence_id and ts == timestamp:
+                return self.__getitem__(idx)
+        raise ValueError(
+            f"No data found for sequence ID: {sequence_id} and timestamp: {timestamp}"
+        )
+
     def subset_on_sequence_id(self, sequence_id: str):
         valid_names = [data_fn for data_fn in self.file_list if sequence_id in data_fn]
         if valid_names:

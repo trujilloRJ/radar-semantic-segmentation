@@ -40,7 +40,7 @@ def create_optimizer(model: torch.nn.Module, choice: OptimizerChoice, lr: float)
 
 if __name__ == "__main__":
     # hyper-parameters
-    experiment_name = "deep2_unet_b4_DoppFilt_WCE01_LN"
+    experiment_name = "deep3_unet_b4_DoppFilt_WCE01_LN"
     resume_training = False
     initial_epoch = 0
     SEED = 0
@@ -50,13 +50,13 @@ if __name__ == "__main__":
     save_each = 25
     optimizer_choice = OptimizerChoice.ADAMW
     criterion = WeightedCrossEntropyLoss(
-        weight=torch.tensor([1, 1, 1, 1, 1.0, 1], device=DEVICE),
+        weight=torch.tensor([1, 1, 1, 1, 0.5, 1], device=DEVICE),
         ignore_index=label_to_index[DONT_CARE],
     )
     scheduler_fn = torch.optim.lr_scheduler.OneCycleLR
     # scheduler_fn = None
     # chs = [16, 32, 64]
-    chs = [32, 64, 128, 256]
+    chs = [64, 128, 256, 512]
     augment_data = False
     steps_for_validation = 1000
     # -------------------------

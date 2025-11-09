@@ -92,6 +92,11 @@ class Grid:
         return x_pos, y_pos
 
 
+def get_grid_encoder():
+    grid_fl = Grid(x_lims=(2, 100), y_lims=(-50, 20), cell_size=0.5)
+    return grid_fl
+
+
 if __name__ == "__main__":
     pass
     # Example usage

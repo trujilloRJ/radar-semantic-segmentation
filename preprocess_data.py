@@ -3,7 +3,7 @@ import h5py
 import json
 import os
 import pandas as pd
-from encoder import Grid
+from encoder import Grid, get_grid_encoder
 from config import SENSOR_FL, labels_map, final_labels
 import torch
 import tqdm
@@ -67,7 +67,7 @@ if __name__ == "__main__":
             cur_dets = detections[detections["timestamp"] == ts]
 
             # creating input and output grids
-            grid_fl = Grid(x_lims=(2, 100), y_lims=(-50, 20), cell_size=0.5)
+            grid_fl = get_grid_encoder()
             grid_fl.fill_grid(cur_dets)
             grid_fl.fill_grid(cur_dets, is_output=True)
 

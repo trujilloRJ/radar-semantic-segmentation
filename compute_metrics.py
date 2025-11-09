@@ -83,7 +83,7 @@ def plot_results(confusion_matrix: torch.Tensor, experiment: str):
 
 
 if __name__ == "__main__":
-    exp_name = "deep2_unet_b4_DoppFilt_WCE01_LN_ep4"
+    exp_name = "deep3_unet_b4_DoppFilt_WCE01_LN_ep3"
     results_path = os.path.join(RESULTS_FOLDER, exp_name)
     gt_path = "data/validation/gt"
 
@@ -98,11 +98,16 @@ if __name__ == "__main__":
 
     confusion_matrix = torch.zeros((N_LABELS, N_LABELS), dtype=torch.int64)
     for batch_idx in tqdm.tqdm(range(n_examples)):
-        input_tensor = pred_dataset[batch_idx]
+        pred_fn = pred_dataset.file_list[batch_idx]
+        gt_fn = gt_dataset.file_list[batch_idx]
+        assert pred_fn.removesuffix("_PRED.pth") == gt_fn.removesuffix("_fl.pt"), (
+            "Prediction and GT filenames do not match!"
+        )
+
+        pred_tensor = pred_dataset[batch_idx]
         gt_tensor = gt_dataset[batch_idx]
 
-        with torch.no_grad():
-            predicted_classes = input_tensor.unsqueeze(0)
+        predicted_classes = pred_tensor.unsqueeze(0)
 
         confusion_matrix += confmat(predicted_classes, gt_tensor.unsqueeze(0))
 

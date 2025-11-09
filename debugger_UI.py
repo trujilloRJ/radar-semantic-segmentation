@@ -22,12 +22,10 @@ from PyQt6.QtCore import Qt  # QTimer no longer needed
 from PyQt6.QtGui import QPixmap, QImage
 from pyqtgraph.Qt import QtGui
 from dotenv import load_dotenv
-
-load_dotenv()
-
-
 from encoder import Grid
 from config import label_to_index, DONT_CARE
+
+load_dotenv()
 
 # Parameters
 NUM_POINTS = 50
@@ -36,13 +34,12 @@ Y_MIN, Y_MAX = 0, 100
 # ---------------------
 
 # Loader parameters
-EXP_NAME = "deep1_unet_WCE_OneCycleLR_ep"
+EXP_NAME = "deep3_unet_b4_DoppFilt_WCE01_LN_ep3"
 RESULTS_PATH = f"results/{EXP_NAME}"
-# GT_PATH = "data/validation/gt"
+GT_PATH = "data/validation/gt"
 DETECTIONS_PATH = os.getenv("DATA_LOCATION")
-GT_PATH = "data/train/gt"
-SEQUENCE_ID = "sequence_2"
-# SEQUENCE_ID = None
+SEQUENCE_ID = "sequence_101"
+limit_sequences_to_gt = True  # set to True if only sequences with GT should be loaded
 grid = Grid(x_lims=(2, 100), y_lims=(-50, 20), cell_size=0.5)
 
 
@@ -79,7 +76,7 @@ class MainWindow(QMainWindow):
         self.sequence_id = SEQUENCE_ID
         self.load_sequence()
         try:
-            self.gt = OutGridDataset(GT_PATH)
+            self.gt_dataset = OutGridDataset(GT_PATH)
             self.gt_available = True
         except Exception as e:
             print("No gt found")
@@ -107,7 +104,7 @@ class MainWindow(QMainWindow):
         self.draw_detections()
         self.update_text_elements()
         self.update_frame_image()
-        # self.draw_grid_cells()
+        self.draw_grid_cells()
 
     def update_frame_image(self):
         ts = self.timestamps[self.current_index]
@@ -140,7 +137,17 @@ class MainWindow(QMainWindow):
         )
 
     def draw_grid_cells(self):
-        gt_cells = self.gt_dataset[self.current_index].squeeze(0).numpy()
+        if self.sequence_id not in self.gt_dataset.sequences:
+            self._gt_plot.clear()
+            self._pred_plot.clear()
+            return
+
+        ts = self.timestamps[self.current_index]
+        gt_cells = (
+            self.gt_dataset.get_data_by_sequence_ts(self.sequence_id, ts)
+            .squeeze(0)
+            .numpy()
+        )
         gt_mask = gt_cells < label_to_index[DONT_CARE]
         x_inds, y_inds = np.where(gt_mask)
         x_pos = x_inds * grid.cell_size + grid.x_lims[0]
@@ -152,7 +159,11 @@ class MainWindow(QMainWindow):
         self._gt_plot.setData(y_pos, x_pos, brush=colors)
 
         if self.pred_dataset_available:
-            pred_cells = self.pred_dataset[self.current_index].squeeze(0).numpy()
+            pred_cells = (
+                self.pred_dataset.get_data_by_sequence_ts(self.sequence_id, ts)
+                .squeeze(0)
+                .numpy()
+            )
             mask = (pred_cells < label_to_index[DONT_CARE]) & gt_mask
             x_inds, y_inds = np.where(mask)
             x_pos = x_inds * grid.cell_size + grid.x_lims[0]
@@ -214,7 +225,7 @@ class MainWindow(QMainWindow):
         # gt grid
         self._gt_plot = pg.ScatterPlotItem(
             pen=pg.mkPen(width=0),
-            size=8,
+            size=10,
             symbol="s",
         )
         # pred grid

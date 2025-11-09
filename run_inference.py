@@ -13,8 +13,8 @@ if __name__ == "__main__":
     evaluation_folder = "data/validation"
     sequence_id = "sequence_1"
     results_folder = "results"
-    model_name = "deep2_unet_b4_DoppFilt_WCE01_LN"
-    epoch = 4
+    model_name = "deep3_unet_b4_DoppFilt_WCE01_LN"
+    epoch = 3
     exp_name = f"{model_name}_ep{epoch}"
 
     results_path = os.path.join(results_folder, exp_name)
@@ -42,7 +42,7 @@ if __name__ == "__main__":
     ):
         input_tensor, gt_tensor, ts = batch
         fn, _ = eval_data.data_gt_list[i]
-        sequence_name = fn.split("_")[0]
+        sequence_name = fn.rsplit("_", 2)[0]
 
         with torch.no_grad():
             output = model(input_tensor.unsqueeze(0))
